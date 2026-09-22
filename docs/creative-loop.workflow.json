@@ -1,0 +1,45 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "游戏广告创意中台 · 业务功能框架",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {"id": "strategy", "label": "01 研究与策划"},
+    {"id": "production", "label": "02 制作与投放准备"},
+    {"id": "learning", "label": "03 投放与增长"}
+  ],
+  "phases": [
+    {"id": "discover", "label": "发现机会", "fromCol": 0, "toCol": 1},
+    {"id": "make", "label": "形成并生产素材", "fromCol": 2, "toCol": 3, "variant": "emphasis"},
+    {"id": "run", "label": "投放与学习", "fromCol": 4, "toCol": 5, "variant": "dashed"}
+  ],
+  "nodes": [
+    {"id": "competitor", "lane": "strategy", "col": 0, "type": "external", "label": "竞品素材库", "sublabel": "来源、链接、原片", "tag": "新增模块"},
+    {"id": "tagging", "lane": "strategy", "col": 1, "type": "database", "label": "素材拆解与标签", "sublabel": "钩子、玩法、情绪"},
+    {"id": "concept", "lane": "strategy", "col": 2, "type": "frontend", "label": "创意方向", "sublabel": "组合标签并提出测试假设"},
+    {"id": "request", "lane": "production", "col": 2, "type": "frontend", "label": "素材需求", "sublabel": "脚本、规格、负责人"},
+    {"id": "asset", "lane": "production", "col": 3, "type": "database", "label": "素材资产", "sublabel": "版本、尺寸、文件"},
+    {"id": "config", "lane": "production", "col": 4, "type": "frontend", "label": "投放配置", "sublabel": "平台、国家、受众", "tag": "初审通过"},
+    {"id": "relation", "lane": "production", "col": 5, "type": "backend", "label": "素材投放关系", "sublabel": "绑定并生成上线包"},
+    {"id": "launch", "lane": "learning", "col": 5, "type": "external", "label": "投放上线", "sublabel": "Leader 登记广告 ID"},
+    {"id": "record", "lane": "learning", "col": 4, "type": "database", "label": "投放纪要", "sublabel": "计划、执行、观察"},
+    {"id": "analysis", "lane": "learning", "col": 3, "type": "backend", "label": "数据分析", "sublabel": "CTR、CPI、漏斗"},
+    {"id": "scale", "lane": "learning", "col": 2, "type": "frontend", "label": "胜出标签放大", "sublabel": "生成下一批需求", "tag": "增长闭环"}
+  ],
+  "edges": [
+    {"from": "competitor", "to": "tagging", "label": "登记并拆解"},
+    {"from": "tagging", "to": "concept", "label": "筛选可测标签"},
+    {"from": "concept", "to": "request", "label": "策划下单"},
+    {"from": "request", "to": "asset", "label": "制作交付"},
+    {"from": "asset", "to": "config", "label": "初审通过"},
+    {"from": "config", "to": "relation", "label": "绑定素材"},
+    {"from": "relation", "to": "launch", "label": "上线包"},
+    {"from": "launch", "to": "record", "label": "记录执行"},
+    {"from": "record", "to": "analysis", "label": "汇入数据"},
+    {"from": "analysis", "to": "scale", "label": "标签评分"},
+    {"from": "scale", "to": "concept", "label": "胜出标签进入下一轮", "role": "return", "variant": "emphasis"}
+  ]
+}

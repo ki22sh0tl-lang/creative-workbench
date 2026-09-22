@@ -1,0 +1,16 @@
+{
+  "name": "creative-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node --watch backend/server.js",
+    "check": "node --test tests/api.test.js",
+    "check:ui": "node --check frontend/app.js",
+    "seed": "node backend/seed-social.js",
+    "seed:social": "node backend/seed-social.js",
+    "test": "node --test tests/api.test.js"
+  }
+}

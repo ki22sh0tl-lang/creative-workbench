@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: creative-workbench
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: '24'
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: /tmp/creative.db
+      - key: SEED_DEMO
+        value: 'true'
+      - key: CAPTURE_TOKEN
+        generateValue: true
