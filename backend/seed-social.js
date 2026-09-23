@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openDatabase } from './db.js';
 import { createApp } from './server.js';
+import { tagCatalog } from '../shared/modules.js';
 
 export async function seedSocial(base) {
   const call = async (path, data) => {
@@ -12,12 +13,17 @@ export async function seedSocial(base) {
   };
   const name = 'AI 微缩生活实验室 · 模拟项目';
   const found = (await call('/projects')).find(p => p.name === name && p.type === 'social' && p.is_demo);
-  if (found) return { projectId: found.id, existing: true };
-  const { id: projectId } = await call('/projects', { name, type: 'social', isDemo: true });
+  const projectId = found?.id || (await call('/projects', { name, type: 'social', isDemo: true })).id;
+  const current = await call(`/workspace?projectId=${projectId}`);
+  const existingTags = new Map(current.tags.map(tag => [`${tag.category}:${tag.name}`, tag.id]));
   const tags = {};
-  for (const [category, names] of [['内容主题', ['微缩美食', '奇幻空间']], ['视觉风格', ['治愈写实']], ['内容结构', ['制作过程', '成品揭晓']], ['核心立意', ['步骤拆解', '视觉欣赏']]]) {
-    for (const name of names) tags[name] = (await call('/tags', { projectId, category, name })).id;
+  for (const [category, names] of Object.entries(tagCatalog)) {
+    for (const name of names) {
+      const key = `${category}:${name}`;
+      tags[name] = existingTags.get(key) || (await call('/tags', { projectId, category, name })).id;
+    }
   }
+  if (found) return { projectId, existing: true, tags: Object.keys(tags).length };
   const batchOne = await call('/records', { projectId, kind: 'batches', title: '1批次', status: '进行中', data: { hypothesis: '第一批内容结构与创意标签基线', owner: '内容负责人（模拟）', startDate: '2026-09-18' }, tags: [] });
   const batchTwo = await call('/records', { projectId, kind: 'batches', title: '2批次', status: '进行中', data: { hypothesis: '保持主题与账号稳定，比较不同内容结构的收藏与触达表现', owner: '内容负责人（模拟）', startDate: '2026-09-22' }, tags: [] });
   let currentBatchId = batchOne.id;

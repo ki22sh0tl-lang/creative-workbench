@@ -209,6 +209,21 @@ export function createApp(db) {
         db.prepare('INSERT INTO tags(id,project_id,category,name) VALUES(?,?,?,?)').run(key, projectId, category, string(input.name, '标签名称', 50));
         return send(201, { id: key });
       }
+      if (req.method === 'DELETE' && path.startsWith('/api/tags/')) {
+        const tagId = decodeURIComponent(path.slice('/api/tags/'.length));
+        const tag = db.prepare('SELECT id, project_id FROM tags WHERE id=?').get(tagId);
+        requireValue(tag, '标签不存在', 404);
+        db.exec('BEGIN');
+        try {
+          db.prepare('DELETE FROM record_tags WHERE tag_id=?').run(tagId);
+          db.prepare('DELETE FROM tags WHERE id=?').run(tagId);
+          db.exec('COMMIT');
+        } catch (error) {
+          db.exec('ROLLBACK');
+          throw error;
+        }
+        return send(200, { id: tagId });
+      }
       if (req.method === 'POST' && path === '/api/ai/analyze') {
         const input = await body(req);
         const provider = input.provider;
@@ -253,10 +268,18 @@ export function createApp(db) {
         return send(201, { ok: true });
       }
       if (path.startsWith('/api/')) return send(404, { error: '接口不存在' });
-      const files = { '/': ['frontend/index.html', 'text/html'], '/app.js': ['frontend/app.js', 'text/javascript'], '/style.css': ['frontend/style.css', 'text/css'], '/shared/modules.js': ['shared/modules.js', 'text/javascript'] };
+      const files = {
+        '/': ['frontend/landing.html', 'text/html'],
+        '/landing.css': ['frontend/landing.css', 'text/css'],
+        '/workbench-preview.png': ['frontend/workbench-preview.png', 'image/png'],
+        '/app': ['frontend/index.html', 'text/html'],
+        '/app.js': ['frontend/app.js', 'text/javascript'],
+        '/style.css': ['frontend/style.css', 'text/css'],
+        '/shared/modules.js': ['shared/modules.js', 'text/javascript']
+      };
       requireValue(req.method === 'GET' && Object.hasOwn(files, path), '页面不存在', 404);
       const [file, type] = files[path];
-      res.writeHead(200, { 'Content-Type': `${type}; charset=utf-8`, 'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'", 'X-Content-Type-Options': 'nosniff' });
+      res.writeHead(200, { 'Content-Type': type.startsWith('image/') ? type : `${type}; charset=utf-8`, 'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'", 'X-Content-Type-Options': 'nosniff' });
       res.end(await readFile(resolve(root, file)));
     } catch (error) {
       if (error.code?.startsWith('ERR_SQLITE') && /UNIQUE/.test(error.message)) return send(409, { error: '记录已存在，请勿重复提交。内容表现每个发布包仅保留一份 72 小时累计值。' });

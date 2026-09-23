@@ -8,8 +8,8 @@ let analyticsPlatform = '', analyticsFormat = '';
 
 const $ = selector => document.querySelector(selector);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const money = value => value == null ? '—' : Number(value).toFixed(2);
-const percent = value => value == null ? '—' : `${(value * 100).toFixed(2)}%`;
+const money = value => value == null ? '暂无' : Number(value).toFixed(2);
+const percent = value => value == null ? '暂无' : `${(value * 100).toFixed(2)}%`;
 const state = { projects: [], projectId: localStorage.getItem('projectId') || '', batchId: localStorage.getItem('batchId') || '', records: [], tags: [], analytics: { rows: [], totals: {}, tags: [] }, query: '', filter: '', loading: false };
 const specials = { dashboard: '工作台', analytics: '数据分析', projects: '项目管理', tags: '标签字典' };
 let generation = 0;
@@ -24,6 +24,7 @@ function notify(message, error = false) { $('#notice').textContent = message; $(
 async function refresh() {
   const ticket = ++generation;
   state.loading = true;
+  $('#content').setAttribute('aria-busy', 'true');
   try {
     const projects = await api('/projects');
     if (ticket !== generation) return;
@@ -41,26 +42,25 @@ async function refresh() {
     $('#batch').value = state.batchId;
     localStorage.setItem('batchId', state.batchId);
     render();
-  } catch (error) { if (ticket === generation) { state.loading = false; notify(`连接失败：${error.message}。请刷新页面重试。`, true); } }
+  } catch (error) { if (ticket === generation) { state.loading = false; $('#content').setAttribute('aria-busy', 'false'); notify(`连接失败：${error.message}。请刷新页面重试。`, true); } }
 }
 function nav() {
   modules = getModules(activeProject()?.type);
-  let html = '<p class="nav-group">项目总览</p><a href="#dashboard">◫ <span>工作台</span></a>', group = '';
+  let html = '<p class="nav-group">项目总览</p><a href="#dashboard"><span>工作台</span></a>', group = '';
   const entries = Object.entries(modules).filter(([key]) => key !== 'notes');
-  const icon = { batches: '◉', competitors: '▧', concepts: '◇', requests: '☷', assets: '▣', configs: '⚙', relations: '⛓', packages: '▤' };
   for (const [key, module] of entries) {
     if (group !== module.group) { group = module.group; html += `<p class="nav-group">${group}</p>`; }
-    html += `<a href="#${key}" ${page() === key ? 'aria-current="page"' : ''}><span class="nav-icon">${icon[key] || '·'}</span><span>${module.label}</span></a>`;
+    html += `<a href="#${key}" ${page() === key ? 'aria-current="page"' : ''}><span>${module.label}</span></a>`;
   }
-  html += '<p class="nav-group">数据闭环</p><a href="#analytics">▥ <span>数据分析</span></a>';
-  if (modules.notes) html += `<a href="#notes" ${page() === 'notes' ? 'aria-current="page"' : ''}><span class="nav-icon">≡</span><span>${modules.notes.label}</span></a>`;
-  html += '<p class="nav-group">基础配置</p><a href="#projects">▦ <span>项目管理</span></a><a href="#tags">⌑ <span>标签字典</span></a>';
+  html += '<p class="nav-group">数据闭环</p><a href="#analytics"><span>数据分析</span></a>';
+  if (modules.notes) html += `<a href="#notes" ${page() === 'notes' ? 'aria-current="page"' : ''}><span>${modules.notes.label}</span></a>`;
+  html += '<p class="nav-group">基础配置</p><a href="#projects"><span>项目管理</span></a><a href="#tags"><span>标签字典</span></a>';
   $('#nav').innerHTML = html;
   $(`#nav a[href="#${page()}"]`)?.setAttribute('aria-current', 'page');
 }
 function heading(title, description, action = '') { return `<div class="page-heading"><div><h1>${title}</h1><p>${description}</p></div>${action}</div>`; }
-function button(label, mode) { return `<button class="primary" data-new="${mode}">＋ ${label}</button>`; }
-function empty(message = '还没有记录，创建第一条开始工作。') { return `<div class="empty"><span>◇</span><h3>${message}</h3><p>所有保存的记录都会留在当前项目中。</p></div>`; }
+function button(label, mode) { return `<button class="primary" data-new="${mode}">${label}</button>`; }
+function empty(message = '还没有记录，创建第一条开始工作。') { return `<div class="empty"><span aria-hidden="true">◇</span><h3>${message}</h3><p>所有保存的记录都会留在当前项目中。</p></div>`; }
 function badges(ids = []) { return ids.map(id => { const tag = state.tags.find(t => t.id === id); return tag ? `<span class="tag">${escape(tag.name)}</span>` : ''; }).join(''); }
 function tagGroupsMarkup(selected = [], inputName = 'tags') {
   const groups = [...new Set(state.tags.map(t => t.category))];
@@ -72,16 +72,33 @@ function inspirationPicker(value = []) {
   return `<div class="inspiration-picker"><div class="picker-hint">把本次选题借鉴的所有案例都选上，可多选。</div><div class="inspiration-list">${records.map(r => `<label class="inspiration-option"><span><strong>${escape(r.title)}</strong><small>${escape(r.data.platform || '未标平台')} · ${escape(r.data.contentFormat || '未标形式')} · ${r.status}</small></span><input type="checkbox" name="referenceIds" value="${escape(r.id)}" ${selected.includes(r.id) ? 'checked' : ''}></label>`).join('') || '<p class="muted">先在灵感素材库创建案例。</p>'}</div></div>`;
 }
 const recordName = id => state.records.find(r => r.id === id)?.title || id || '未关联';
-function table(headers, rows) { return `<div class="table-wrap"><table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`; }
+function table(headers, rows, label = '数据列表') { return `<div class="table-wrap" tabindex="0" role="region" aria-label="${escape(label)}"><table><thead><tr>${headers.map(h => `<th scope="col">${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`; }
 function stat(label, value, detail) { return `<div class="stat"><span>${label}</span><strong>${value}</strong><small>${detail}</small></div>`; }
 function dashboard() {
-  const records = state.records, counts = key => records.filter(r => r.kind === key).length;
-  const todo = records.filter(r => ['待制作', '制作中', '待初审', '需修改', '待交付'].includes(r.status));
-  if (social()) return heading('把灵感变成下一轮好内容', '收集灵感、协作制作、记录发布，让每次复盘都能产生下一步行动。', button('新建选题', 'concepts')) +
-    `<div class="studio-intro"><div><span class="studio-label">${activeProject().is_demo ? '模拟内容工作室' : '内容工作室'}</span><h2>AI 微缩生活实验室</h2><p>用 AI 图片和短视频探索微缩美食、奇幻空间与治愈日常。内容在外部制作，中台负责协作、版本与复盘。</p><a class="text-link" href="#analytics">先看当前批次数据 →</a></div><div class="studio-art" aria-hidden="true"><span>灵感</span><span>作品</span><span>反馈</span></div></div>` +
-    `<div class="stats">${stat('选题实验', counts('concepts'), '每个选题关联制作任务')}${stat('内容资产', counts('assets'), '图文与短视频分开观察')}${stat('待办任务', todo.length, '制作、初审与发布准备')}${stat('已发布', records.filter(r => r.kind === 'packages' && r.status === '已发布').length, '发布记录可追溯到创意标签')}</div>` +
-    `<div class="workflow">${[['competitors', '收集灵感'], ['concepts', '确定选题'], ['requests', '制作协作'], ['assets', '内容初审'], ['packages', '登记发布'], ['analytics', '数据分析'], ['notes', '批次复盘']].map(([key, label], i) => `<a href="#${key}"><small>0${i + 1}</small><strong>${label}</strong><span>${specials[key] || modules[key].label}</span></a>`).join('')}</div>` +
-    `<div class="section-title"><h2>下一步要做什么</h2><span>${todo.length} 条待办</span></div>` + (todo.length ? table(['任务', '环节', '状态', '负责人', '操作'], todo.slice(0, 12).map(r => `<tr><td><strong>${escape(r.title)}</strong></td><td>${modules[r.kind].label}</td><td><span class="status">${r.status}</span></td><td>${escape(r.data.owner || '未分配')}</td><td><button data-edit="${r.id}">查看 / 编辑</button></td></tr>`)) : empty('当前没有待办事项'));
+  const records = state.records;
+  const batchRecords = records.filter(r => !state.batchId || r.data.batchId === state.batchId || r.id === state.batchId);
+  const counts = key => batchRecords.filter(r => r.kind === key).length;
+  const todo = batchRecords.filter(r => ['待制作', '制作中', '待初审', '需修改', '待交付'].includes(r.status));
+  if (social()) {
+    const batch = activeBatch();
+    const rows = state.analytics.rows.filter(r => !state.batchId || r.batchId === state.batchId);
+    const totals = summarizeSocial(rows);
+    const published = batchRecords.filter(r => r.kind === 'packages' && r.status === '已发布').length;
+    const flow = [
+      ['competitors', '收集灵感', '把可借鉴案例收进同一批次'],
+      ['concepts', '确定选题', '关联案例并写清验证目标'],
+      ['requests', '制作协作', '把选题转成明确制作任务'],
+      ['assets', '内容初审', '记录版本、标签和审核结论'],
+      ['packages', '登记发布', '保留平台、账号和发布快照'],
+      ['analytics', '数据分析', '比较作品与标签组合表现'],
+      ['notes', '批次复盘', '形成保留项和下一轮变量']
+    ];
+    return `<section class="workbench-hero" aria-labelledby="workbench-title"><div class="hero-copy"><span class="hero-kicker">内容实验工作台</span><h1 id="workbench-title"><span>把灵感、生产和复盘</span><span class="accent-line">连成同一条证据链。</span></h1><p>按批次连接灵感、选题、制作、发布数据和下一轮决策。</p><div class="hero-actions"><button class="primary" data-new="concepts">新建选题</button><a class="secondary-action" href="#analytics">查看批次数据</a></div></div><div class="batch-snapshot" aria-label="当前批次概览"><div class="snapshot-head"><span>当前实验批次</span><a href="#batches">管理批次</a></div><strong class="snapshot-title">${escape(batch?.title || '等待创建批次')}</strong><p class="snapshot-hypothesis">${escape(batch?.data.hypothesis || '为当前批次补充实验假设，数据才有明确的判断方向。')}</p><dl><div><dt>内容样本</dt><dd>${totals.count}</dd></div><div><dt>阅读 / 播放</dt><dd>${totals.views.toLocaleString()}</dd></div><div><dt>收藏率</dt><dd>${percent(totals.saveRate)}</dd></div></dl><div class="snapshot-path" aria-hidden="true"><span></span><span></span><span></span><span></span></div><small>${activeProject().is_demo ? '模拟数据用于验证完整流程' : '数据来自当前批次的发布记录'}</small></div></section>` +
+      `<section class="home-section" aria-labelledby="workflow-title"><div class="home-section-head"><div><h2 id="workflow-title">一次内容实验，7 个可追溯环节</h2><p>每个结果都能回到灵感来源、制作版本和发布条件。</p></div><a href="#notes">查看批次复盘</a></div><div class="workflow">${flow.map(([key, label, detail]) => `<a href="#${key}"><span class="flow-stage">${escape(specials[key] || modules[key].label)}</span><strong>${label}</strong><small>${detail}</small></a>`).join('')}</div></section>` +
+      `<section class="home-overview" aria-label="当前批次状态"><div class="stats">${stat('灵感案例', counts('competitors'), '当前批次已收集')}${stat('选题实验', counts('concepts'), '已关联灵感来源')}${stat('待办任务', todo.length, '制作、初审与交付')}${stat('已发布内容', published, '可进入数据观察')}</div><div class="purpose-note"><strong>工作台负责记录判断依据</strong><p>内容仍在外部工具制作，这里保存灵感、任务、版本、数据和下一轮动作。</p></div></section>` +
+      `<div class="section-title"><h2>现在要推进什么</h2><span>${todo.length} 条待办</span></div>` +
+      (todo.length ? table(['任务', '环节', '状态', '负责人', '操作'], todo.slice(0, 12).map(r => `<tr><td><strong>${escape(r.title)}</strong></td><td>${modules[r.kind].label}</td><td><span class="status">${r.status}</span></td><td>${escape(r.data.owner || '未分配')}</td><td><button data-edit="${r.id}">查看 / 编辑</button></td></tr>`), '当前批次待办') : empty('当前批次没有待办事项'));
+  }
   return heading('让每一轮创意都有依据', '从竞品参考到投放复盘，把创意、素材和效果连在一起。', button('新建创意', 'concepts')) +
     `<div class="stats">${stat('创意方向', counts('concepts'), '等待验证的创意假设')}${stat('素材资产', counts('assets'), '以独立尺寸 / 版本登记')}${stat('待办事项', todo.length, '制作、审核与交付')}${stat('已上线', records.filter(r => r.kind === 'packages' && r.status === '已上线').length, '已登记平台广告 ID')}</div>` +
     `<div class="workflow">${[['competitors', '发现参考'], ['concepts', '确定方向'], ['requests', '下达需求'], ['assets', '制作与初审'], ['packages', '交付投放'], ['analytics', '数据分析'], ['notes', '批次复盘']].map(([key, label], i) => `<a href="#${key}"><small>0${i + 1}</small><strong>${label}</strong><span>${specials[key] || modules[key].label}</span></a>`).join('')}</div>` +
@@ -91,8 +108,8 @@ function recordsView(key) {
   const module = modules[key];
   const batchAware = module.fields.some(f => f.key === 'batchId');
   const records = state.records.filter(r => r.kind === key && (!batchAware || !state.batchId || r.data.batchId === state.batchId) && (!state.filter || r.status === state.filter) && `${r.title} ${r.id} ${Object.values(r.data).filter(v => typeof v === 'string').join(' ')} ${r.tags.map(t => state.tags.find(x => x.id === t)?.name).join(' ')}`.toLowerCase().includes(state.query.toLowerCase()));
-  const toolbar = `<div class="toolbar"><input id="search" type="search" placeholder="搜索标题、标签或编号" aria-label="搜索" value="${escape(state.query)}"><select id="status-filter" aria-label="筛选状态"><option value="">全部状态</option>${module.states.map(s => `<option ${s === state.filter ? 'selected' : ''}>${s}</option>`).join('')}</select><span>${records.length} 条记录</span></div>`;
-  const rows = records.map(r => `<tr><td><strong>${escape(r.title)}</strong><small class="record-id">${r.id.slice(0, 8)}</small></td><td>${badges(r.tags) || '<span class="muted">未标注</span>'}</td><td><span class="status ${['已通过', '已批准', '已上线', '已完成', '有效', '可使用'].includes(r.status) ? 'good' : ''}">${r.status}</span></td><td>${module.fields.filter(f => f.type === 'link' || f.type === 'multilink').map(f => `<small>${f.label}</small><span>${f.type === 'multilink' ? escape((r.data[f.key] || []).map(recordName).join('、')) : escape(recordName(r.data[f.key]))}</span>`).join('') || escape(r.data.owner || r.data.game || '—')}</td><td>${r.updated_at.slice(0, 10)}</td><td><button data-edit="${r.id}">查看 / 编辑</button></td></tr>`);
+  const toolbar = `<div class="toolbar"><input id="search" name="search" type="search" placeholder="搜索标题、标签或编号…" aria-label="搜索记录" autocomplete="off" value="${escape(state.query)}"><select id="status-filter" name="status" aria-label="筛选状态"><option value="">全部状态</option>${module.states.map(s => `<option ${s === state.filter ? 'selected' : ''}>${s}</option>`).join('')}</select><span>${records.length} 条记录</span></div>`;
+  const rows = records.map(r => `<tr><td><strong>${escape(r.title)}</strong><small class="record-id">${r.id.slice(0, 8)}</small></td><td>${badges(r.tags) || '<span class="muted">未标注</span>'}</td><td><span class="status ${['已通过', '已批准', '已上线', '已完成', '有效', '可使用'].includes(r.status) ? 'good' : ''}">${r.status}</span></td><td>${module.fields.filter(f => f.type === 'link' || f.type === 'multilink').map(f => `<small>${f.label}</small><span>${f.type === 'multilink' ? escape((r.data[f.key] || []).map(recordName).join('、')) : escape(recordName(r.data[f.key]))}</span>`).join('') || escape(r.data.owner || r.data.game || '未填写')}</td><td>${r.updated_at.slice(0, 10)}</td><td><button data-edit="${r.id}">查看 / 编辑</button></td></tr>`);
   return heading(module.label, module.description, button(`新建${module.label}`, key)) + toolbar + (rows.length ? table(['名称 / 编号', '创意标签', '状态', '关联 / 负责人', '更新日期', '操作'], rows) : empty(state.query || state.filter ? '没有符合条件的记录' : undefined));
 }
 function analyticsView() {
@@ -182,16 +199,19 @@ function render() {
   const current = page();
   $('#breadcrumb').textContent = `${state.projects.find(p => p.id === state.projectId)?.name || '工作空间'} / ${specials[current] || modules[current].label}`;
   if (!state.projectId && current !== 'projects') {
-    $('#content').innerHTML = heading('创建你的第一个项目', '按账号团队或内容主题建立工作空间，再逐步完善创意与数据。', button('创建项目', 'projects')) + empty('从一个内容项目开始'); return;
+    $('#content').innerHTML = heading('工作台正在准备演示数据', '演示数据准备完成后即可直接浏览完整流程。') + empty('暂时没有可展示的项目');
+    $('#content').setAttribute('aria-busy', 'false');
+    return;
   }
   let html;
   if (current === 'dashboard') html = dashboard();
   else if (current === 'analytics') html = analyticsView();
   else if (current === 'notes' && social()) html = socialReview();
   else if (current === 'projects') html = heading('项目管理', '每个项目有独立的创意、标签、内容与表现数据。新建项目默认使用内容工作流。', button('新建项目', 'projects')) + (state.projects.length ? `<div class="project-grid">${state.projects.map(p => `<article class="project-card"><span class="muted">${p.type === 'social' ? '社媒内容项目' : '原广告项目'}${p.is_demo ? ' · 模拟数据' : ''}</span><h2>${escape(p.name)}</h2><p>创建于 ${p.created_at.slice(0, 10)}</p><button data-project="${p.id}" ${p.id === state.projectId ? 'disabled' : ''}>${p.id === state.projectId ? '当前工作空间' : '进入项目'}</button></article>`).join('')}</div>` : empty());
-  else if (current === 'tags') html = heading('标签字典', '按父类维护子标签，标签会贯穿灵感、选题、成片和 BI 看板。', button('新增标签', 'tags')) + (state.tags.length ? `<div class="tag-groups">${tagCategories.filter(category => state.tags.some(t => t.category === category)).map(category => `<article><div class="tag-parent">${escape(category)}</div><div class="tag-children">${badges(state.tags.filter(t => t.category === category).map(t => t.id))}</div></article>`).join('')}</div>` : empty('先创建内容主题、内容结构、核心立意等标签分类'));
+  else if (current === 'tags') html = heading('标签字典', '按父类维护子标签，标签会贯穿灵感、选题、成片和 BI 看板。', button('新增标签', 'tags')) + `<div class="tag-groups">${tagCategories.map(category => { const tags = state.tags.filter(t => t.category === category); return `<article><div class="tag-parent-row"><div class="tag-parent">${escape(category)}</div><button class="tag-add" type="button" data-new="tags" data-tag-category="${escape(category)}">新增子标签</button></div><div class="tag-children">${tags.length ? tags.map(tag => `<span class="tag tag-removable"><span>${escape(tag.name)}</span><button class="tag-remove" type="button" data-delete-tag="${escape(tag.id)}" aria-label="删除标签 ${escape(tag.name)}">×</button></span>`).join('') : '<span class="muted">暂无子标签</span>'}</div></article>`; }).join('')}</div>`;
   else html = recordsView(current);
   $('#content').innerHTML = html;
+  $('#content').setAttribute('aria-busy', 'false');
 }
 function control(f, value = '') {
   const key = escape(f.key), required = f.required ? ' required' : '';
@@ -236,7 +256,7 @@ function openEditor(kind, existing, defaults) {
   $('#dialog-title').textContent = `${existing ? '编辑' : '新建'}${specials[kind] || modules[kind]?.label || '日数据'}`;
   let html;
   if (kind === 'projects') html = control({ key: 'name', label: '项目名称', required: true }) + '<label class="checkbox"><input type="checkbox" name="isDemo">模拟项目（不与真实数据混用）</label>';
-  else if (kind === 'tags') html = control({ key: 'category', label: '标签分类', type: 'select', options: tagCategories, required: true }) + control({ key: 'name', label: '标签名称', required: true }) + `<p class="muted">分类按素材拆解建议维护，新增值会贯穿灵感、选题、成片和 BI 看板。</p>`;
+  else if (kind === 'tags') html = control({ key: 'category', label: '标签分类', type: 'select', options: tagCategories, required: true }, defaults?.data?.category) + control({ key: 'name', label: '标签名称', required: true }) + `<p class="muted">分类按素材拆解建议维护，新增值会贯穿灵感、选题、成片和 BI 看板。</p>`;
   else if (kind === 'metrics' && social()) html = '<p class="muted">填写发布后 72 小时的累计值。同一发布包只录入一次；没有观测到的数据请先核实，不要用零代替未知。</p>' + control({ key: 'packageId', label: '已发布内容', type: 'link', target: 'packages', required: true }) + control({ key: 'date', label: '采集日期', type: 'date', required: true }, new Date().toLocaleDateString('sv-SE')) + socialMetricFields.map(f => control(f)).join('');
   else if (kind === 'metrics') html = control({ key: 'packageId', label: '已上线的投放包', type: 'link', target: 'packages', required: true }) + control({ key: 'date', label: '报表日期', type: 'date', required: true }, new Date().toLocaleDateString('sv-SE')) + ['spend', 'impressions', 'clicks', 'installs'].map((key, i) => control({ key, label: ['花费', '展示次数', '点击次数', '安装次数'][i], type: 'number', required: true })).join('');
   else {
@@ -275,7 +295,14 @@ $('#project').onchange = async event => { state.projectId = event.target.value; 
 $('#batch').onchange = event => { state.batchId = event.target.value; state.query = ''; state.filter = ''; analyticsPlatform = ''; analyticsFormat = ''; localStorage.setItem('batchId', state.batchId); render(); };
 $('#content').addEventListener('click', async event => {
   const target = event.target.closest('button'); if (!target || state.loading) return;
-  if (target.dataset.new) openEditor(target.dataset.new);
+  if (target.dataset.new) openEditor(target.dataset.new, null, target.dataset.tagCategory ? { data: { category: target.dataset.tagCategory } } : undefined);
+  if (target.dataset.deleteTag) {
+    const tag = state.tags.find(item => item.id === target.dataset.deleteTag);
+    if (!tag || !window.confirm(`确定删除“${tag.name}”吗？已关联的记录会解除这个标签。`)) return;
+    target.disabled = true;
+    try { await api(`/tags/${encodeURIComponent(tag.id)}`, { method: 'DELETE', data: {} }); notify('标签已删除'); await refresh(); }
+    catch (error) { target.disabled = false; notify(error.message, true); }
+  }
   if (target.dataset.exportCsv) {
     exportSocialCsv(currentAnalyticsRows());
   }

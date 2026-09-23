@@ -221,5 +221,21 @@ export function openDatabase(path = process.env.DB_PATH || resolve('data/creativ
       throw error;
     }
   }
+  if (path !== ':memory:' && !db.prepare('SELECT 1 FROM app_meta WHERE key=?').get('social-v9')) {
+    db.exec('BEGIN');
+    try {
+      const projects = db.prepare("SELECT id FROM projects WHERE type='social'").all();
+      for (const { id: projectId } of projects) {
+        for (const [category, names] of Object.entries(tagCatalog)) {
+          for (const name of names) db.prepare('INSERT OR IGNORE INTO tags(id,project_id,category,name) VALUES(lower(hex(randomblob(16))),?,?,?)').run(projectId, category, name);
+        }
+      }
+      db.prepare('INSERT INTO app_meta(key,value) VALUES(?,?)').run('social-v9', new Date().toISOString());
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+  }
   return db;
 }

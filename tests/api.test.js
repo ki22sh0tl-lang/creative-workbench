@@ -48,7 +48,10 @@ test('HTTP workflow, validation, snapshot stability, analytics and persistence',
     const attack = await fetch(`${base}/api/projects`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://other.example' }, body: JSON.stringify({ name: 'blocked' }) });
     assert.equal(attack.status, 403);
     assert.equal((await fetch(`${base}/backend/db.js`)).status, 404);
-    assert.equal((await fetch(`${base}/`)).status, 200);
+    const landing = await fetch(`${base}/`);
+    assert.equal(landing.status, 200);
+    assert.match(await landing.text(), /设计策划 \| 内容实验工作台/);
+    assert.equal((await fetch(`${base}/app`)).status, 200);
     const empty = (await call(`/workspace?projectId=${another.id}`)).value;
     assert.equal(empty.analytics.totals.cpi, null);
     assert.equal(empty.records.length, 0);
@@ -74,6 +77,10 @@ test('social demo keeps ad data, compares 72-hour snapshots and feeds production
     const sample = await seedSocial(base);
     assert.equal((await seedSocial(base)).existing, true);
     let workspace = (await call(`/workspace?projectId=${sample.projectId}`)).value;
+    const removableTag = workspace.tags.find(tag => tag.name === '品牌故事');
+    assert.equal((await call(`/tags/${removableTag.id}`, {}, 'DELETE')).status, 200);
+    workspace = (await call(`/workspace?projectId=${sample.projectId}`)).value;
+    assert.equal(workspace.tags.some(tag => tag.id === removableTag.id), false);
     assert.equal(workspace.analytics.rows.length, 8);
     assert.equal(workspace.records.filter(r => r.kind === 'packages').length, 8);
     assert.deepEqual(workspace.records.filter(r => r.kind === 'batches').map(r => r.title).sort(), ['1批次', '2批次']);

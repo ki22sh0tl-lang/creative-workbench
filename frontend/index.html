@@ -1,21 +1,30 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>创意中台 · Creative Workbench</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script></head>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b0d10">
+  <meta name="description" content="用批次连接灵感、选题、制作、发布数据和内容复盘的创意工作台。">
+  <title>创意中台 | Content Experiment Workbench</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
 <body>
+  <a class="skip-link" href="#content">跳到主要内容</a>
   <aside>
     <a class="brand" href="#dashboard"><span class="mark">创</span><span>创意中台<small>Creative Workbench</small></span></a>
     <label class="project-label" for="project">当前项目</label><select id="project" aria-label="切换项目"></select>
     <label class="project-label" for="batch">当前实验批次</label><select id="batch" aria-label="切换实验批次"></select>
     <nav id="nav" aria-label="功能导航"></nav>
-    <footer><span class="dot"></span>本地工作空间<small>人工策划 · 数据驱动迭代</small></footer>
+    <footer><span class="dot" aria-hidden="true"></span>本地工作空间<small>人工策划 · 数据驱动迭代</small></footer>
   </aside>
   <main>
-    <header><span id="breadcrumb">项目总览 / 工作台</span><span class="local-badge">本地开发版</span></header>
+    <header class="app-header"><span id="breadcrumb">项目总览 / 工作台</span><span class="local-badge">本地开发版</span></header>
     <div id="notice" role="status" aria-live="polite"></div>
     <div id="demo-banner" role="note"></div>
-    <section id="content" aria-live="polite"><p>正在连接工作空间…</p></section>
+    <section id="content" tabindex="-1" aria-busy="true"><p>正在连接工作空间…</p></section>
   </main>
-  <dialog id="editor"><form id="form"><div class="dialog-top"><h2 id="dialog-title"></h2><button type="button" id="close" aria-label="关闭">×</button></div><div id="fields"></div><p id="form-error" role="alert"></p><div class="dialog-actions"><button type="button" id="cancel">取消</button><button class="primary" type="submit" id="save">保存</button></div></form></dialog>
-  <dialog id="ai-dialog"><form id="ai-form"><div class="dialog-top"><div><span class="eyebrow" id="ai-provider-label"></span><h2>AI 营销与运营分析</h2></div><button type="button" id="ai-close" aria-label="关闭">×</button></div><p class="muted">API Key 只在本次请求中使用，不写入数据库。提示词固定包含当前筛选后的 BI 数据。</p><label class="field">API Key<input id="ai-key" type="password" autocomplete="off" required></label><label class="field">固定分析提示词<textarea id="ai-prompt" rows="12" readonly></textarea></label><p id="ai-error" role="alert"></p><div id="ai-result" class="ai-result"></div><div class="dialog-actions"><button type="button" id="ai-copy">复制提示词</button><button class="primary" type="submit" id="ai-run">开始分析</button></div></form></dialog>
+  <dialog id="editor" aria-labelledby="dialog-title"><form id="form"><div class="dialog-top"><h2 id="dialog-title"></h2><button type="button" id="close" aria-label="关闭编辑窗口">×</button></div><div id="fields"></div><p id="form-error" role="alert"></p><div class="dialog-actions"><button type="button" id="cancel">取消</button><button class="primary" type="submit" id="save">保存</button></div></form></dialog>
+  <dialog id="ai-dialog" aria-labelledby="ai-dialog-title"><form id="ai-form"><div class="dialog-top"><div><span class="eyebrow" id="ai-provider-label"></span><h2 id="ai-dialog-title">AI 营销与运营分析</h2></div><button type="button" id="ai-close" aria-label="关闭分析窗口">×</button></div><p class="muted">API Key 只在本次请求中使用，不写入数据库。提示词固定包含当前筛选后的 BI 数据。</p><label class="field">API Key<input id="ai-key" name="apiKey" type="password" autocomplete="off" spellcheck="false" required></label><label class="field">固定分析提示词<textarea id="ai-prompt" name="prompt" rows="12" readonly></textarea></label><p id="ai-error" role="alert"></p><div id="ai-result" class="ai-result" aria-live="polite"></div><div class="dialog-actions"><button type="button" id="ai-copy">复制提示词</button><button class="primary" type="submit" id="ai-run">开始分析</button></div></form></dialog>
 </body>
 </html>
