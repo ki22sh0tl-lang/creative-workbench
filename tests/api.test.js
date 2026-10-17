@@ -50,7 +50,10 @@ test('HTTP workflow, validation, snapshot stability, analytics and persistence',
     assert.equal((await fetch(`${base}/backend/db.js`)).status, 404);
     const landing = await fetch(`${base}/`);
     assert.equal(landing.status, 200);
-    assert.match(await landing.text(), /设计策划 \| 内容实验工作台/);
+    assert.match(await landing.text(), /创意中台 \| Content Experiment Workbench/);
+    const about = await fetch(`${base}/about`);
+    assert.equal(about.status, 200);
+    assert.match(await about.text(), /设计策划 \| 内容实验工作台/);
     assert.equal((await fetch(`${base}/app`)).status, 200);
     const empty = (await call(`/workspace?projectId=${another.id}`)).value;
     assert.equal(empty.analytics.totals.cpi, null);
