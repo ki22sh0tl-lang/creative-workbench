@@ -269,11 +269,18 @@ export function createApp(db) {
       }
       if (path.startsWith('/api/')) return send(404, { error: '接口不存在' });
       const files = {
-        '/': ['frontend/landing.html', 'text/html'],
+        '/': ['frontend/index.html', 'text/html'],
+        '/about': ['frontend/landing.html', 'text/html'],
         '/landing.css': ['frontend/landing.css', 'text/css'],
         '/workbench-preview.png': ['frontend/workbench-preview.png', 'image/png'],
         '/app': ['frontend/index.html', 'text/html'],
         '/app.js': ['frontend/app.js', 'text/javascript'],
+        '/spatial.js': ['frontend/spatial.js', 'text/javascript'],
+        '/universe.js': ['frontend/universe.js', 'text/javascript'],
+        '/graph-data.js': ['frontend/graph-data.js', 'text/javascript'],
+        '/spatial.css': ['frontend/spatial.css', 'text/css'],
+        '/vendor/three.module.js': ['node_modules/three/build/three.module.js', 'text/javascript'],
+        '/vendor/three.core.js': ['node_modules/three/build/three.core.js', 'text/javascript'],
         '/style.css': ['frontend/style.css', 'text/css'],
         '/shared/modules.js': ['shared/modules.js', 'text/javascript']
       };
