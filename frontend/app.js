@@ -1,3 +1,6 @@
+import { mountSpatial } from '/spatial.js';
+let spatialView = null;
+let graphMode = true;
 import { getModules, socialMetricFields, summarizeSocial, tagCatalog, tagCategories } from '/shared/modules.js';
 let modules = getModules('ads');
 const activeProject = () => state.projects.find(p => p.id === state.projectId);
@@ -30,7 +33,7 @@ async function refresh() {
     if (ticket !== generation) return;
     state.projects = projects.filter(p => p.type === 'social');
     if (!state.projects.some(p => p.id === state.projectId)) state.projectId = state.projects[0]?.id || '';
-    $('#project').innerHTML = projects.length ? projects.map(p => `<option value="${escape(p.id)}">${escape(p.name)}</option>`).join('') : '<option value="">请先创建项目</option>';
+    $('#project').innerHTML = state.projects.length ? state.projects.map(p => `<option value="${escape(p.id)}">${escape(p.name)}</option>`).join('') : '<option value="">请先创建项目</option>';
     $('#project').value = state.projectId;
     localStorage.setItem('projectId', state.projectId);
     const data = state.projectId ? await api(`/workspace?projectId=${encodeURIComponent(state.projectId)}`) : { records: [], tags: [], analytics: { rows: [], totals: {}, tags: [] } };
@@ -195,11 +198,23 @@ function socialReview() {
 }
 function render() {
   nav();
+  const inGraph = page() === 'dashboard' && graphMode && !!state.projectId;
+  document.body.classList.toggle('graph-mode', inGraph);
+  $('#view-toggle').textContent = inGraph ? '列表视图' : '图谱视图';
+  if (!inGraph && spatialView) { spatialView.dispose(); spatialView = null; }
+  document.querySelectorAll('[data-space-nav]').forEach(b => b.classList.toggle('active', inGraph && b.dataset.spaceNav === 'home'));
+
   $('#demo-banner').textContent = activeProject()?.is_demo ? '模拟工作空间：账号、内容与效果均为虚构示例，未实际发布到任何平台。' : '';
   const current = page();
   $('#breadcrumb').textContent = `${state.projects.find(p => p.id === state.projectId)?.name || '工作空间'} / ${specials[current] || modules[current].label}`;
   if (!state.projectId && current !== 'projects') {
     $('#content').innerHTML = heading('工作台正在准备演示数据', '演示数据准备完成后即可直接浏览完整流程。') + empty('暂时没有可展示的项目');
+    $('#content').setAttribute('aria-busy', 'false');
+    return;
+  }
+  if (inGraph) {
+    if (!spatialView) spatialView = mountSpatial($('#content'));
+    spatialView.update(state);
     $('#content').setAttribute('aria-busy', 'false');
     return;
   }
@@ -317,8 +332,8 @@ $('#content').addEventListener('click', async event => {
   }
   if (target.dataset.iterate) {
     const pack = state.records.find(r => r.id === target.dataset.iterate);
-    const sourceTask = state.records.find(r => r.id === pack.data.snapshot.asset.data.requestId);
-    const row = state.analytics.rows.find(r => r.package_id === pack.id);
+    const sourceTask = state.records.find(r => r.id === pack?.data.snapshot?.asset?.data.requestId);
+    const row = state.analytics.rows.find(r => r.package_id === pack?.id);
     if (!sourceTask || !row) return notify('无法找到来源制作任务或表现数据', true);
     const s = summarizeSocial([row]);
     openEditor('requests', null, { title: `下一轮：${pack.title}`, status: '草稿', tags: pack.data.snapshot.asset.tags, data: { batchId: state.batchId, conceptId: sourceTask.data.conceptId, sourcePackageId: pack.id, brief: `${row.source === 'simulated' ? '【模拟观察，不是真实效果】' : '【观察线索，非因果结论】'}\n来源内容：${pack.title}\n72 小时阅读 / 播放 ${row.views}，收藏 ${row.saves}，收藏率 ${percent(s.saveRate)}。\n保留：${row.tags.map(t => t.name).join('、')}。\n下一轮只改变：请填写一个待验证变量。\n交付要求：请填写脚本、规格与验收标准。` } });
@@ -335,3 +350,18 @@ $('#content').addEventListener('change', event => {
 });
 window.addEventListener('hashchange', () => { state.query = ''; state.filter = ''; render(); });
 refresh();
+
+$('#view-toggle').onclick = () => {
+  graphMode = !document.body.classList.contains('graph-mode');
+  if (graphMode && page() !== 'dashboard') location.hash = 'dashboard'; else render();
+};
+$('#quick-create').onclick = () => { if (state.projectId) openEditor('concepts'); else openEditor('projects'); };
+document.querySelectorAll('[data-space-nav]').forEach(b => b.addEventListener('click', () => {
+  graphMode = true;
+  if (page() !== 'dashboard') { history.replaceState(null, '', '#dashboard'); render(); }
+  else if (!spatialView) render();
+  if (b.dataset.spaceNav === 'home') spatialView?.home(); else spatialView?.focusCategory(b.dataset.spaceNav);
+  document.querySelectorAll('[data-space-nav]').forEach(el => el.classList.toggle('active', el === b));
+}));
+document.querySelectorAll('.manage-options a').forEach(a => a.addEventListener('click', () => { a.closest('details').open = false; }));
+document.querySelector('.spatial-brand').addEventListener('click', () => { graphMode = true; if (page() === 'dashboard') { render(); spatialView?.home(); } });

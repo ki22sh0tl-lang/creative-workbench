@@ -7,19 +7,25 @@
   <meta name="description" content="用批次连接灵感、选题、制作、发布数据和内容复盘的创意工作台。">
   <title>创意中台 | Content Experiment Workbench</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/spatial.css">
   <script type="module" src="/app.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#content">跳到主要内容</a>
   <aside>
     <a class="brand" href="#dashboard"><span class="mark">创</span><span>创意中台<small>Creative Workbench</small></span></a>
-    <label class="project-label" for="project">当前项目</label><select id="project" aria-label="切换项目"></select>
-    <label class="project-label" for="batch">当前实验批次</label><select id="batch" aria-label="切换实验批次"></select>
+
     <nav id="nav" aria-label="功能导航"></nav>
     <footer><span class="dot" aria-hidden="true"></span>内容工作空间<small>人工策划 · 数据驱动迭代</small></footer>
   </aside>
   <main>
-    <header class="app-header"><span id="breadcrumb">项目总览 / 工作台</span><a class="local-badge" href="/">返回首页 ↗</a></header>
+    <header class="app-header">
+      <a class="spatial-brand" href="#dashboard" aria-label="创意中台工作空间"><span class="brand-glyph" aria-hidden="true">◈</span><span class="brand-word">创意中台<small>Creative constellation</small></span></a>
+      <nav class="top-navigation" aria-label="工作空间导航"><button type="button" data-space-nav="home" class="active">工作空间</button><button type="button" data-space-nav="works">发布作品</button><button type="button" data-space-nav="production">内容生产</button><button type="button" data-space-nav="review">复盘决策</button></nav>
+      <div class="header-actions"><button type="button" id="view-toggle">列表视图</button><details class="manage-menu"><summary>管理</summary><div class="manage-options"><a href="#batches">实验批次</a><a href="#projects">项目管理</a><a href="#tags">标签字典</a><a href="#configs">账号与发布设置</a><a href="#relations">发布计划</a><a href="#analytics">数据分析 / 导出</a><a href="#notes">AI 批次复盘</a></div></details><button type="button" class="create-button" id="quick-create">＋ 新建选题</button></div>
+      <span id="breadcrumb" hidden></span>
+    </header>
+    <div class="workspace-context"><label>项目 <select id="project" aria-label="切换项目"></select></label><span class="context-divider">/</span><label>实验批次 <select id="batch" aria-label="切换实验批次"></select></label><span class="context-note"><i></i>灵感、作品与决策，在这里相连</span></div>
     <div id="notice" role="status" aria-live="polite"></div>
     <div id="demo-banner" role="note"></div>
     <section id="content" tabindex="-1" aria-busy="true"><p>正在连接工作空间…</p></section>

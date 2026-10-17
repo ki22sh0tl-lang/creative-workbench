@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "start": "node backend/server.js",
     "dev": "node --watch backend/server.js",
@@ -12,5 +14,8 @@
     "seed": "node backend/seed-social.js",
     "seed:social": "node backend/seed-social.js",
     "test": "node --test tests/api.test.js"
+  },
+  "dependencies": {
+    "three": "0.180.0"
   }
 }
