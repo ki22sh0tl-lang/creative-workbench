@@ -5,7 +5,7 @@ services:
     plan: free
     buildCommand: npm ci
     startCommand: npm start
-    healthCheckPath: /healthz
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: '24'
@@ -15,5 +15,3 @@ services:
         value: /tmp/creative.db
       - key: SEED_DEMO
         value: 'true'
-      - key: CAPTURE_TOKEN
-        generateValue: true
